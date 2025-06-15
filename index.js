@@ -36,10 +36,29 @@ app.post('/api/shorturl', function (req, res) {
   // console.log('Received URL:', req.body.url);
   // console.log('Parsed URL:', originalUrl.host);
 
+
+  function isValidHttpUrl(str) {
+    const pattern = new RegExp(
+      '^(https?:\\/\\/)?' + // protocol
+      '((([a-z\\d]([a-z\\d-]*[a-z\\d])*)\\.)+[a-z]{2,}|' + // domain name
+      '((\\d{1,3}\\.){3}\\d{1,3}))|' + // OR ip (v4) address
+      '(localhost)' + // OR localhost
+      '(\\:\\d+)?(\\/[-a-z\\d%_.~+]*)*' + // port and path
+      '(\\?[;&a-z\\d%_.~+=-]*)?' + // query string
+      '(\\#[-a-z\\d_]*)?$', // fragment locator
+      'i'
+    );
+    return pattern.test(str);
+  }
+
+  const isLocalhost = originalUrl.host.substring(0, 9) === 'localhost';
+  // console.log('Is localhost:', isLocalhost, `${originalUrl.host.substring(0, 9)}`);
+
   dns.lookup(originalUrl.host, (err, address) => {
     console.log('DNS lookup result:', err, address);
-    if (err || !address) {
-      return res.status(400).json({ error: 'invalid url' });
+    if ((!isLocalhost) && (err || !address)) {
+      // return res.status(400).json({ error: 'invalid url' });
+      return res.json({ error: 'invalid url' });
     }
 
     database.push(`${req.body.url}`);
@@ -55,7 +74,7 @@ app.post('/api/shorturl', function (req, res) {
 app.get('/api/shorturl/:short_url', function (req, res) {
   const numUrl = Number(req.params.short_url);
   if (numUrl) {
-    if (numUrl > database.length - 1 || numUrl < 1) {
+    if (numUrl > database.length || numUrl < 1) {
       return res.status(404).json({ error: 'short url not found' });
     }
     const originalUrl = database[numUrl - 1];
